@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import pool from "../config/sql.js";
-
 import createCompanySchema from "../schemas/createCompanySchema.js";
 
 const createCompaniesTableIfNotExists = async () => {
@@ -19,12 +18,9 @@ const createCompaniesTableIfNotExists = async () => {
 
 export const createCompany = async (req: Request, res: Response) => {
   const { body } = req;
-
-  // Ensure the companies table exists
   await createCompaniesTableIfNotExists();
 
   try {
-    // Validate request body against the schema
     const { value, error } = createCompanySchema.validate(body);
     if (error) {
       return res.status(400).json({
@@ -35,8 +31,6 @@ export const createCompany = async (req: Request, res: Response) => {
     }
 
     const { name } = value;
-
-    // Check if the company already exists in the database
     const existingCompany = await pool.query(
       "SELECT * FROM companies WHERE LOWER(name) = LOWER($1)",
       [name]
@@ -50,20 +44,17 @@ export const createCompany = async (req: Request, res: Response) => {
       });
     }
 
-    // Insert the new company into the database
     const result = await pool.query(
       "INSERT INTO companies (name) VALUES ($1) RETURNING *",
       [name]
     );
 
-    // Return a success response with the created company data
     return res.status(201).json({
       status: "SUCCESS",
       message: "Company created successfully.",
       data: result.rows[0],
     });
   } catch (error) {
-    // Handle unexpected errors
     if (error instanceof Error) {
       return res.status(500).json({
         status: "ERROR",
@@ -74,7 +65,6 @@ export const createCompany = async (req: Request, res: Response) => {
       });
     }
 
-    // Fallback for any other unexpected errors
     return res.status(500).json({
       status: "ERROR",
       error: "UNKNOWN_ERROR",
@@ -104,15 +94,12 @@ export const editCompany = async (req: Request, res: Response) => {
   const { body } = req;
 
   try {
-    // Validate input
     const { value, error } = createCompanySchema.validate(body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
 
     const { name } = value;
-
-    // Check if company exists
     const company = await pool.query("SELECT * FROM companies WHERE id = $1", [
       id,
     ]);
@@ -121,7 +108,6 @@ export const editCompany = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Company not found" });
     }
 
-    // Check if new name already exists (excluding current company)
     const existingCompany = await pool.query(
       "SELECT * FROM companies WHERE LOWER(name) = LOWER($1) AND id != $2",
       [name, id]
@@ -133,7 +119,6 @@ export const editCompany = async (req: Request, res: Response) => {
         .json({ error: "Company with this name already exists" });
     }
 
-    // Update the company
     const result = await pool.query(
       "UPDATE companies SET name = $1 WHERE id = $2 RETURNING *",
       [name, id]
@@ -156,7 +141,6 @@ export const deleteCompany = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    // Check if company exists
     const company = await pool.query("SELECT * FROM companies WHERE id = $1", [
       id,
     ]);
