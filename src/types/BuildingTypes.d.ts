@@ -5,6 +5,6 @@ export type BuildingTypes = {
   company_id: id;
   desktop_image?: Express.Multer.File;
   mobile_image?: Express.Multer.File;
-  desktop_paths: string[];
-  mobile_paths: string[];
+  desktop_paths: any;
+  mobile_paths: any;
 };

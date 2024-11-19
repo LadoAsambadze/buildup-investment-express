@@ -6,8 +6,8 @@ export interface FloorPlanType {
   building_id: number;
   desktop_image?: Express.Multer.File;
   mobile_image?: Express.Multer.File;
-  desktop_paths: string[];
-  mobile_paths: string[];
+  desktop_paths: any;
+  mobile_paths: any;
   floor_range_start: number;
   floor_range_end: number;
   starting_apartment_number: number;
