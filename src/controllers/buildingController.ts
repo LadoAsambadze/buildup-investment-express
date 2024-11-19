@@ -24,7 +24,6 @@ const createBuildingsTableIfNotExists = async () => {
   }
 };
 
-
 export const createBuilding = async (req: Request, res: Response) => {
 
   await createBuildingsTableIfNotExists()
@@ -32,7 +31,6 @@ export const createBuilding = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const { body } = req;
 
-    // Validate request body against the schema
     const { value, error } = createBuildingSchema.validate(body);
     if (error) {
       return res.status(400).json({
@@ -44,7 +42,6 @@ export const createBuilding = async (req: Request, res: Response) => {
 
     const { name, address, company_id, desktop_paths, mobile_paths } = value;
 
-    // Check if company exists
     const company = await pool.query("SELECT * FROM companies WHERE id = $1", [
       company_id,
     ]);
@@ -57,11 +54,9 @@ export const createBuilding = async (req: Request, res: Response) => {
       });
     }
 
-    // Handle the case where desktop_paths and mobile_paths are strings (i.e., JSON stringified)
     let parsedDesktopPaths = desktop_paths;
     let parsedMobilePaths = mobile_paths;
 
-    // If they are strings, parse them into objects
     if (typeof parsedDesktopPaths === 'string') {
       try {
         parsedDesktopPaths = JSON.parse(parsedDesktopPaths);
@@ -86,7 +81,6 @@ export const createBuilding = async (req: Request, res: Response) => {
       }
     }
 
-    // Validate that desktop_paths and mobile_paths are now objects
     if (typeof parsedDesktopPaths !== 'object' || Array.isArray(parsedDesktopPaths) ||
         typeof parsedMobilePaths !== 'object' || Array.isArray(parsedMobilePaths)) {
       return res.status(400).json({
@@ -96,7 +90,7 @@ export const createBuilding = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for duplicate building names
+
     const existingBuilding = await pool.query(
       "SELECT * FROM buildings WHERE LOWER(name) = LOWER($1) AND company_id = $2",
       [name, company_id]
@@ -118,8 +112,6 @@ export const createBuilding = async (req: Request, res: Response) => {
     if (files?.mobile_image && files.mobile_image[0]) {
       mobileImageUrl = files.mobile_image[0].path;
     }
-
-    // Insert the building with JSONB objects
     const result = await pool.query(
       `INSERT INTO buildings (
         name, address, company_id, desktop_paths, mobile_paths, desktop_image, mobile_image
@@ -128,14 +120,13 @@ export const createBuilding = async (req: Request, res: Response) => {
         name,
         address,
         company_id,
-        JSON.stringify(parsedDesktopPaths), // Convert object to JSONB
-        JSON.stringify(parsedMobilePaths),  // Convert object to JSONB
+        JSON.stringify(parsedDesktopPaths),  
+        JSON.stringify(parsedMobilePaths),   
         desktopImageUrl,
         mobileImageUrl,
       ]
     );
 
-    // Parse JSONB fields back to objects in the response
     const building = result.rows[0];
 
     return res.status(201).json({
@@ -152,8 +143,6 @@ export const createBuilding = async (req: Request, res: Response) => {
     });
   }
 };
-
-
 
 export const getBuildings = async (req: Request, res: Response) => {
   const { company_id } = req.query;
@@ -220,7 +209,7 @@ export const updateBuilding = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
 
-  console.log("123m", body)
+
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
   try {
