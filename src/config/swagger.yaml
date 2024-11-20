@@ -1285,3 +1285,129 @@ paths:
                   details:
                     type: string
                     example: Some detailed error message (only in development mode)
+
+  /apartments/{building_id}:
+    get:
+      summary: Get apartments by building ID
+      operationId: getApartmentsByBuildingId
+      tags:
+        - Apartments
+      parameters:
+        - name: building_id
+          in: path
+          description: The ID of the building to get apartments for.
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Apartments retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+                    example: Apartments retrieved successfully for building ID 1.
+                  apartments:
+                    type: object
+                    properties:
+                      building_id:
+                        type: integer
+                        example: 1
+                      floor_plan_id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Plan A"
+                      floors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            floor:
+                              type: integer
+                              example: 1
+                            apartments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  flat_id:
+                                    type: integer
+                                    example: 1
+                                  flat_number:
+                                    type: integer
+                                    example: 101
+                                  status:
+                                    type: string
+                                    enum: ["free", "reserved", "sold"]
+                                    default: "free"
+                                    example: "free"
+                                  image:
+                                    type: string
+                                    nullable: true
+                                    example: null
+                                  square_meters:
+                                    type: number
+                                    format: float
+                                    description: Apartment area in square meters
+                                    default: 0
+                                    example: 0
+        "400":
+          description: Invalid building_id parameter.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: INVALID_BUILDING_ID
+                  message:
+                    type: string
+                    example: The provided building_id is not valid.
+        "404":
+          description: No apartments found for the specified building_id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: NO_APARTMENTS_FOUND
+                  message:
+                    type: string
+                    example: No apartments found for building ID 1.
+        "500":
+          description: An error occurred while retrieving apartments.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: SERVER_ERROR
+                  message:
+                    type: string
+                    example: An error occurred while retrieving apartments.
+                  details:
+                    type: string
+                    example: Some detailed error message (only in development mode)

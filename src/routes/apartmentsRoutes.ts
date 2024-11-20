@@ -2,7 +2,7 @@
 
 import express, { Request, Response } from "express";
 
-import { createApartments, getAllApartments, getApartmentsByBuilding } from "controllers/apartmentsController";
+import { createApartments, getApartments } from "controllers/apartmentsController";
 const apartmentsRoutes = express.Router();
 
 // routes/floorPlanRoutes.ts
@@ -16,18 +16,12 @@ apartmentsRoutes.post(
 );
 
 
+
 apartmentsRoutes.get(
-  "/apartments",
+  "/apartments/:building_id",
 
   async (req: Request, res: Response) => {
-    await getAllApartments(req, res);
-  }
-);
-apartmentsRoutes.get(
-  "/apartments/building/:id",
-
-  async (req: Request, res: Response) => {
-    await getApartmentsByBuilding(req, res);
+    await getApartments(req, res);
   }
 );
 
