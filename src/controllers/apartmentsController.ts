@@ -11,8 +11,14 @@ const createApartmentsTableIfNotExists = async () => {
         flat_id INT NOT NULL,
         flat_number INT NOT NULL,
         floor INT NOT NULL,
+        building_id INT NOT NULL,
         floor_plan_id INT NOT NULL,
-        FOREIGN KEY (floor_plan_id) REFERENCES floor_plans(id)
+        name VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'free', 
+        image TEXT,
+        square_meters DECIMAL(10,2) DEFAULT 0,
+        CHECK (status IN ('free', 'reserved', 'sold')),
+        CONSTRAINT unique_apartment UNIQUE (building_id, name, floor_plan_id)
       );
     `);
     console.log("Table 'apartments' is ready");
@@ -21,8 +27,36 @@ const createApartmentsTableIfNotExists = async () => {
   }
 };
 
-// Function to generate apartments based on floor plan info
-const generateApartments = async (floorPlanId: number) => {
+// Function to check if the building exists
+const checkIfBuildingExists = async (buildingId: number) => {
+  const result = await pool.query(
+    "SELECT 1 FROM buildings WHERE id = $1",
+    [buildingId]
+  );
+  return result.rows.length > 0;
+};
+
+// Function to check if the floor plan exists
+const checkIfFloorPlanExists = async (floorPlanId: number) => {
+  const result = await pool.query(
+    "SELECT 1 FROM floor_plans WHERE id = $1",
+    [floorPlanId]
+  );
+  return result.rows.length > 0;
+};
+
+// Function to check if apartments with the same building_id, name, and floor_plan_id already exist
+const checkExistingApartments = async (buildingId: number, name: string, floorPlanId: number) => {
+  const result = await pool.query(`
+    SELECT * FROM apartments 
+    WHERE building_id = $1 AND name = $2 AND floor_plan_id = $3
+  `, [buildingId, name, floorPlanId]);
+
+  return result.rows.length > 0;
+};
+
+// Function to generate apartments based on the floor plan info
+const generateApartments = async (buildingId: number, name: string, floorPlanId: number) => {
   try {
     const floorPlanResult = await pool.query(
       "SELECT * FROM floor_plans WHERE id = $1",
@@ -35,41 +69,31 @@ const generateApartments = async (floorPlanId: number) => {
     }
 
     const floorPlan = floorPlanResult.rows[0];
-
-    // Extract floor plan data
-    const {
-      floor_range_start,
-      floor_range_end,
-      starting_apartment_number,
-      apartments_per_floor,
-    } = floorPlan;
+    const { floor_range_start, floor_range_end, starting_apartment_number, apartments_per_floor } = floorPlan;
 
     let currentFlatNumber = starting_apartment_number;
     const apartmentsByFloor = [];
 
-    // Loop through each floor in the range and generate apartments for each floor
     for (let floor = floor_range_start; floor <= floor_range_end; floor++) {
       const apartments = [];
 
-      // Reset flat_id for each new floor
       for (let flatIndex = 0; flatIndex < apartments_per_floor; flatIndex++) {
-        const flatId = flatIndex + 1; // Flat ID starts from 1 for each floor
+        const flatId = flatIndex + 1;
         const flatNumber = currentFlatNumber++;
 
-        // Insert apartment record into the apartments table
+        // Insert apartment record with the main values: building_id and floor_plan_id
         await pool.query(
-          "INSERT INTO apartments (flat_id, flat_number, floor, floor_plan_id) VALUES ($1, $2, $3, $4)",
-          [flatId, flatNumber, floor, floorPlanId]
+          "INSERT INTO apartments (flat_id, flat_number, floor, building_id, floor_plan_id, name, status, image, square_meters) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [flatId, flatNumber, floor, buildingId, floorPlanId, name, 'free', null, 0]
         );
 
-        // Add apartment to the array for the current floor
         apartments.push({
           flat_id: flatId,
           flat_number: flatNumber,
+          status: 'free'
         });
       }
 
-      // Add floor with its apartments to the main array
       apartmentsByFloor.push({
         floor,
         apartments,
@@ -82,16 +106,17 @@ const generateApartments = async (floorPlanId: number) => {
     throw error;
   }
 };
+
 // Controller function to create apartments based on floor plan info
 export const createApartments = async (req: Request, res: Response) => {
-  const { floor_plan_id } = req.body;
+  const { building_id, name, floor_plan_id } = req.body;
 
   // Ensure the apartments table exists
   await createApartmentsTableIfNotExists();
 
   try {
-    // Validate the floor plan ID provided in the request
-    const { value, error } = createApartmentsSchema.validate({ floor_plan_id });
+    // Validate the input data
+    const { value, error } = createApartmentsSchema.validate({ building_id, name, floor_plan_id });
     if (error) {
       return res.status(400).json({
         status: "ERROR",
@@ -100,10 +125,40 @@ export const createApartments = async (req: Request, res: Response) => {
       });
     }
 
-    const { floor_plan_id: validatedFloorPlanId } = value;
+    const { building_id: validatedBuildingId, name: validatedName, floor_plan_id: validatedFloorPlanId } = value;
+
+    // Check if the building exists
+    const buildingExists = await checkIfBuildingExists(validatedBuildingId);
+    if (!buildingExists) {
+      return res.status(400).json({
+        status: "ERROR",
+        error: "BUILDING_NOT_FOUND",
+        message: `Building with ID ${validatedBuildingId} does not exist.`,
+      });
+    }
+
+    // Check if the floor plan exists
+    const floorPlanExists = await checkIfFloorPlanExists(validatedFloorPlanId);
+    if (!floorPlanExists) {
+      return res.status(400).json({
+        status: "ERROR",
+        error: "FLOOR_PLAN_NOT_FOUND",
+        message: `Floor plan with ID ${validatedFloorPlanId} does not exist.`,
+      });
+    }
+
+    // Check if apartments with the same building_id, name, and floor_plan_id already exist
+    const existingApartments = await checkExistingApartments(validatedBuildingId, validatedName, validatedFloorPlanId);
+    if (existingApartments) {
+      return res.status(400).json({
+        status: "ERROR",
+        error: "DUPLICATE_APARTMENTS",
+        message: "Apartments with the same building_id, name, and floor_plan_id already exist.",
+      });
+    }
 
     // Generate apartments based on the floor plan info
-    const apartmentsByFloor = await generateApartments(validatedFloorPlanId);
+    const apartmentsByFloor = await generateApartments(validatedBuildingId, validatedName, validatedFloorPlanId);
 
     // Return a success response with the generated apartments grouped by floor
     return res.status(201).json({

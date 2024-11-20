@@ -13,14 +13,14 @@ async function ensureTablesExist() {
         building_id INTEGER NOT NULL REFERENCES buildings(id),
         desktop_image TEXT NOT NULL,
         mobile_image TEXT NOT NULL,
-        desktop_paths TEXT[] NOT NULL,
-        mobile_paths TEXT[] NOT NULL,
+        desktop_paths JSONB NOT NULL,  -- Changed from TEXT[] to JSONB
+        mobile_paths JSONB NOT NULL,   -- Changed from TEXT[] to JSONB
         floor_range_start INTEGER NOT NULL,
         floor_range_end INTEGER NOT NULL,
         starting_apartment_number INTEGER NOT NULL,
         apartments_per_floor INTEGER NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(name)
+        UNIQUE(name, building_id)
       )
     `);
     console.log("Tables created successfully");
@@ -74,15 +74,52 @@ export const createFloorPlan = async (req: Request, res: Response) => {
 
     // Check if the floor plan already exists in the database
     const existingFloorPlan = await pool.query(
-      "SELECT * FROM floor_plans WHERE LOWER(name) = LOWER($1)",
-      [name]
+      "SELECT * FROM floor_plans WHERE LOWER(name) = LOWER($1) AND building_id = $2",
+      [name, building_id]
     );
 
     if (existingFloorPlan.rows.length > 0) {
       return res.status(409).json({
         status: "ERROR",
         error: "FLOOR_PLAN_EXIST",
-        message: "A floor plan with this name already exists.",
+        message: "A floor plan with this name already exists for this building.",
+      });
+    }
+
+    // Parse paths similar to building creation
+    let parsedDesktopPaths = desktop_paths;
+    let parsedMobilePaths = mobile_paths;
+
+    if (typeof parsedDesktopPaths === 'string') {
+      try {
+        parsedDesktopPaths = JSON.parse(parsedDesktopPaths);
+      } catch (err) {
+        return res.status(400).json({
+          status: "ERROR",
+          error: "VALIDATION_ERROR",
+          message: "desktop_paths must be a valid JSON object",
+        });
+      }
+    }
+
+    if (typeof parsedMobilePaths === 'string') {
+      try {
+        parsedMobilePaths = JSON.parse(parsedMobilePaths);
+      } catch (err) {
+        return res.status(400).json({
+          status: "ERROR",
+          error: "VALIDATION_ERROR",
+          message: "mobile_paths must be a valid JSON object",
+        });
+      }
+    }
+
+    if (typeof parsedDesktopPaths !== 'object' || Array.isArray(parsedDesktopPaths) ||
+        typeof parsedMobilePaths !== 'object' || Array.isArray(parsedMobilePaths)) {
+      return res.status(400).json({
+        status: "ERROR",
+        error: "VALIDATION_ERROR",
+        message: "desktop_paths and mobile_paths must be objects",
       });
     }
 
@@ -99,16 +136,18 @@ export const createFloorPlan = async (req: Request, res: Response) => {
     // Insert the new floor plan into the database
     const result = await pool.query(
       `INSERT INTO floor_plans (
-        name, building_id, desktop_image, mobile_image, desktop_paths, mobile_paths,
-        floor_range_start, floor_range_end, starting_apartment_number, apartments_per_floor
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        name, building_id, desktop_image, mobile_image, 
+        desktop_paths, mobile_paths,
+        floor_range_start, floor_range_end, 
+        starting_apartment_number, apartments_per_floor
+      ) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10) RETURNING *`,
       [
         name,
         building_id,
         desktopImageUrl,
         mobileImageUrl,
-        JSON.stringify(desktop_paths), // Convert objects to JSON strings
-        JSON.stringify(mobile_paths), // Convert objects to JSON strings
+        JSON.stringify(parsedDesktopPaths),
+        JSON.stringify(parsedMobilePaths),
         floor_range_start,
         floor_range_end,
         starting_apartment_number,

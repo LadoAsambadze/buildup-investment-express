@@ -9,8 +9,6 @@ servers:
     description: Local server
 
 paths:
-
-
   /create-company:
     post:
       tags:
@@ -226,9 +224,6 @@ paths:
                     type: string
                     description: Error message.
 
- 
- 
-
   /buildings:
     get:
       summary: Get all buildings
@@ -331,7 +326,7 @@ paths:
                     main: /path/to/main
                     exit: /path/to/exit
       responses:
-        '201':
+        "201":
           description: Building created successfully
           content:
             application/json:
@@ -373,7 +368,7 @@ paths:
                         example:
                           entrance: /path/to/entrance
                           lobby: /path/to/lobby
-        '400':
+        "400":
           description: Bad Request - Invalid input data
           content:
             application/json:
@@ -389,7 +384,7 @@ paths:
                   message:
                     type: string
                     example: desktop_paths and mobile_paths must be objects
-        '404':
+        "404":
           description: Company not found
           content:
             application/json:
@@ -405,7 +400,7 @@ paths:
                   message:
                     type: string
                     example: Company with this ID does not exist.
-        '409':
+        "409":
           description: Building with this name already exists for this company
           content:
             application/json:
@@ -421,7 +416,7 @@ paths:
                   message:
                     type: string
                     example: Building with this name already exists for this company
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
@@ -533,7 +528,7 @@ paths:
                     main: /path/to/main
                     exit: /path/to/exit
       responses:
-        '200':
+        "200":
           description: Building updated successfully
           content:
             application/json:
@@ -566,7 +561,7 @@ paths:
                     example:
                       entrance: /path/to/entrance
                       lobby: /path/to/lobby
-        '400':
+        "400":
           description: Bad Request - Invalid input data
           content:
             application/json:
@@ -582,7 +577,7 @@ paths:
                   message:
                     type: string
                     example: desktop_paths and mobile_paths must be objects
-        '404':
+        "404":
           description: Building or company not found
           content:
             application/json:
@@ -598,7 +593,7 @@ paths:
                   message:
                     type: string
                     example: Building or company not found
-        '409':
+        "409":
           description: Building with this name already exists for this company
           content:
             application/json:
@@ -614,7 +609,7 @@ paths:
                   message:
                     type: string
                     example: Building with this name already exists for this company
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
@@ -636,7 +631,7 @@ paths:
       tags:
         - Buildings
       responses:
-        '200':
+        "200":
           description: Building deleted successfully
           content:
             application/json:
@@ -649,7 +644,7 @@ paths:
                   message:
                     type: string
                     example: Building deleted successfully
-        '404':
+        "404":
           description: Building not found
           content:
             application/json:
@@ -665,7 +660,7 @@ paths:
                   message:
                     type: string
                     example: Building not found
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
@@ -681,9 +676,6 @@ paths:
                   message:
                     type: string
                     example: An error occurred while deleting the building
-
-
-
 
   /create-floor-plan:
     post:
@@ -720,13 +712,17 @@ paths:
                   description: ID of the building the floor plan is associated with
                 desktop_paths:
                   type: object
-                  description: Object representing desktop path details
+                  description: Object containing desktop navigation paths
+                  additionalProperties:
+                    type: string
                   example:
                     path1: "M10,20 L30,40"
                     path2: "M50,60 L70,80"
                 mobile_paths:
                   type: object
-                  description: Object representing mobile path details
+                  description: Object containing mobile navigation paths
+                  additionalProperties:
+                    type: string
                   example:
                     path1: "M15,25 L35,45"
                     path2: "M55,65 L75,85"
@@ -766,6 +762,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  status:
+                    type: string
+                    example: SUCCESS
                   message:
                     type: string
                     example: "Floor plan created successfully"
@@ -778,31 +777,84 @@ paths:
                       name:
                         type: string
                         example: "Tower A Floor Plan"
+                      building_id:
+                        type: integer
+                      desktop_image:
+                        type: string
+                      mobile_image:
+                        type: string
+                      desktop_paths:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      mobile_paths:
+                        type: object
+                        additionalProperties:
+                          type: string
         "400":
-          description: Bad request, validation failed
+          description: Bad Request - Invalid input data
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: VALIDATION_ERROR
                   message:
                     type: string
-                    example: "Validation error"
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                      example: "Name cannot be empty"
+                    example: "desktop_paths and mobile_paths must be objects"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: BUILDING_NOT_FOUND
+                  message:
+                    type: string
+                    example: "Building with this ID does not exist."
+        "409":
+          description: Floor plan with this name already exists for the building
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: FLOOR_PLAN_EXIST
+                  message:
+                    type: string
+                    example: "A floor plan with this name already exists for this building."
         "500":
-          description: Internal server error
+          description: Server error
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  status:
+                    type: string
+                    example: ERROR
+                  error:
+                    type: string
+                    example: SERVER_ERROR
                   message:
                     type: string
-                    example: "Internal server error"
+                    example: "An error occurred while creating the floor plan"
 
   /floor-plans:
     get:
@@ -1109,12 +1161,12 @@ paths:
 
   /create-apartments:
     post:
-      summary: Generate apartments based on a floor plan ID
+      summary: Generate apartments based on a floor plan ID and building ID
       operationId: createApartments
       tags:
         - Apartments
       requestBody:
-        description: The floor plan ID used to generate apartments.
+        description: The floor plan ID, building ID, and name used to generate apartments.
         content:
           application/json:
             required: true
@@ -1125,8 +1177,18 @@ paths:
                   type: integer
                   description: The ID of the floor plan to generate apartments for.
                   example: 1
+                building_id:
+                  type: integer
+                  description: The ID of the building for the apartments.
+                  example: 1
+                name:
+                  type: string
+                  description: The name or label for the floor plan.
+                  example: "Plan A"
               required:
                 - floor_plan_id
+                - building_id
+                - name
       responses:
         "201":
           description: Apartments generated successfully.
@@ -1160,8 +1222,30 @@ paths:
                               flat_number:
                                 type: integer
                                 example: 101
+                              building_id:
+                                type: integer
+                                example: 1
+                              floor_plan_id:
+                                type: integer
+                                example: 1
+                              status:
+                                type: string
+                                enum: ["free", "reserved", "sold"]
+                                default: "free"
+                                example: "free"
+                              image:
+                                type: string
+                                description: URL or path to apartment image
+                                nullable: true
+                                example: null
+                              square_meters:
+                                type: number
+                                format: float
+                                description: Apartment area in square meters
+                                default: 0
+                                example: 0
         "400":
-          description: Invalid floor plan ID provided.
+          description: Invalid input or duplicate apartments.
           content:
             application/json:
               schema:
@@ -1172,10 +1256,16 @@ paths:
                     example: ERROR
                   error:
                     type: string
-                    example: VALIDATION_ERROR
+                    enum:
+                      [
+                        BUILDING_NOT_FOUND,
+                        FLOOR_PLAN_NOT_FOUND,
+                        DUPLICATE_APARTMENTS,
+                      ]
+                    example: BUILDING_NOT_FOUND
                   message:
                     type: string
-                    example: "Floor plan ID must be a positive integer."
+                    example: "Building with ID 1 does not exist."
         "500":
           description: An error occurred while generating apartments.
           content:

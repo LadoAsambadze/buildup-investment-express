@@ -148,8 +148,6 @@ export const deleteCompany = async (req: Request, res: Response) => {
     if (company.rows.length === 0) {
       return res.status(404).json({ error: "Company not found" });
     }
-
-    // Delete the company
     await pool.query("DELETE FROM companies WHERE id = $1", [id]);
 
     return res.status(200).json({ message: "Company deleted successfully" });
