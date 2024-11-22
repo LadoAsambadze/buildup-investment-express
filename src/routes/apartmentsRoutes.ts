@@ -24,5 +24,23 @@ apartmentsRoutes.get(
     await getApartments(req, res);
   }
 );
+ 
+
+apartmentsRoutes.put(
+  "/apartments/:id",
+
+  async (req: Request, res: Response) => {
+    await getApartments(req, res);
+  }
+);
+
+apartmentsRoutes.delete(
+  "/apartments/:id",
+
+  async (req: Request, res: Response) => {
+    await getApartments(req, res);
+  }
+);
+
 
 export default apartmentsRoutes;

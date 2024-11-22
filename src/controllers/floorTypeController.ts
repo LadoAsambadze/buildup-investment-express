@@ -177,14 +177,60 @@ export const getFloorPlans = async (_: Request, res: Response) => {
     );
     return res.status(200).json(result.rows);
   } catch (error) {
-    if (error instanceof Error)
+    if (error instanceof Error) {
       return res.status(500).json({
         error: "An error occurred while fetching floor plans",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
+    }
   }
 };
+
+// Get floor plans for a specific building based on the building_id
+export const getFloorPlansByBuildingId = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Ensure id is provided and valid
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        status: 'ERROR',
+        error: 'INVALID_BUILDING_ID',
+        message: 'A valid building ID must be provided'
+      });
+    }
+
+    // Query to fetch floor plans for a specific building ID
+    const query = "SELECT * FROM floor_plans WHERE building_id = $1 ORDER BY name ASC";
+    const result = await pool.query(query, [Number(id)]);
+
+    // Check if there are any results for the given building_id
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        status: 'ERROR',
+        error: 'NOT_FOUND',
+        message: 'No floor plans found for the provided building ID'
+      });
+    }
+
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({
+        status: 'ERROR',
+        error: 'SERVER_ERROR',
+        message: 'An error occurred while fetching floor plans',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    return res.status(500).json({
+      status: 'ERROR',
+      error: 'SERVER_ERROR',
+      message: 'An unknown server error occurred'
+    });
+  }
+};
+
 
 
 export const deleteFloorPlan = async (req: Request, res: Response) => {
