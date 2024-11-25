@@ -1411,3 +1411,195 @@ paths:
                   details:
                     type: string
                     example: Some detailed error message (only in development mode)
+
+  /update-apartment-status:
+    put:
+      summary: Update the status of an apartment
+      description: Updates the status of an apartment based on the floor plan ID and flat number.
+      operationId: updateApartmentStatus
+      tags:
+        - Apartments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - free
+                    - reserved
+                    - sold
+                  description: The new status of the apartment.
+                floor_plan_id:
+                  type: integer
+                  description: The ID of the floor plan that the apartment belongs to.
+                flat_number:
+                  type: integer
+                  description: The flat number of the apartment.
+              required:
+                - status
+                - floor_plan_id
+                - flat_number
+      responses:
+        "200":
+          description: Apartment status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Apartment status updated successfully"
+                  apartment:
+                    type: object
+                    properties:
+                      flat_id:
+                        type: integer
+                        example: 1
+                      flat_number:
+                        type: integer
+                        example: 101
+                      status:
+                        type: string
+                        example: "reserved"
+                      floor_plan_id:
+                        type: integer
+                        example: 8
+                      image:
+                        type: string
+                        nullable: true
+                        example: null
+                      square_meters:
+                        type: string
+                        example: "50.00"
+        "400":
+          description: Invalid input. The request body is not valid or missing required fields.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid input"
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                        path:
+                          type: array
+                          items:
+                            type: string
+                        type:
+                          type: string
+        "404":
+          description: No apartment found with the provided floor_plan_id and flat_number.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Apartment not found with the given floor_plan_id and flat_number"
+        "500":
+          description: Internal server error. Something went wrong on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /update-shared-properties:
+    put:
+      summary: Update shared properties of an apartment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                floor_plan_id:
+                  type: integer
+                  description: The ID of the floor plan
+                  example: 1
+                flat_id:
+                  type: integer
+                  description: The ID of the flat
+                  example: 1
+                square_meters:
+                  type: number
+                  description: The square meters of the flat
+                  example: 50.0
+      responses:
+        "200":
+          description: Shared properties updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Shared properties updated successfully
+                  updatedApartments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        flat_id:
+                          type: integer
+                          example: 1
+                        flat_number:
+                          type: integer
+                          example: 101
+                        status:
+                          type: string
+                          example: free
+                        square_meters:
+                          type: number
+                          example: 50.0
+                  affectedCount:
+                    type: integer
+                    example: 1
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Both floor_plan_id and flat_id are required
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: No apartments found with the provided flat_id under this floor plan
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal server error

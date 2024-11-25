@@ -4,7 +4,7 @@ import multer from "multer";
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");  
+    cb(null, "uploads/"); // Make sure this directory exists
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -24,13 +24,11 @@ const fileFilter = (req: any, file: any, cb: any) => {
   }
 };
 
-export const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-}).fields([
-  { name: "desktop_image", maxCount: 1 },
-  { name: "mobile_image", maxCount: 1 },
-]);
+ 
+  export const uploadApartmentsImage = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 5 * 1024 * 1024,  
+    },
+  });

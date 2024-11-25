@@ -1,11 +1,10 @@
-// routes/floorPlanRoutes.ts
+
 
 import express, { Request, Response } from "express";
-
-import { createApartments, getApartments } from "controllers/apartmentsController";
+import { createApartments, getApartments, updateApartmentStatus, updateSharedProperties } from "controllers/apartmentsController";
+ 
+ 
 const apartmentsRoutes = express.Router();
-
-// routes/floorPlanRoutes.ts
 
 apartmentsRoutes.post(
   "/create-apartments",
@@ -14,7 +13,6 @@ apartmentsRoutes.post(
     await createApartments(req, res);
   }
 );
-
 
 
 apartmentsRoutes.get(
@@ -27,15 +25,31 @@ apartmentsRoutes.get(
  
 
 apartmentsRoutes.put(
-  "/apartments/:id",
+  "/update-apartment-status",
 
   async (req: Request, res: Response) => {
-    await getApartments(req, res);
+    await updateApartmentStatus(req, res);
   }
 );
 
+
+
+apartmentsRoutes.put(
+  "/update-shared-properties",
+
+  async (req: Request, res: Response) => {
+    await updateSharedProperties(req, res);
+  }
+);
+
+
+
+
+
+
+
 apartmentsRoutes.delete(
-  "/apartments/:id",
+  "/apartments/:building_id",
 
   async (req: Request, res: Response) => {
     await getApartments(req, res);

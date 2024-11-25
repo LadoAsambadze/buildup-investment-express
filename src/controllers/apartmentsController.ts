@@ -1,8 +1,9 @@
 import pool from "config/sql";
 import { Request, Response } from "express";
-import { createApartmentsSchema } from "../schemas/createApartmentsSchema";
+import { createApartmentsSchema, updateApartmentStatusSchema } from "../schemas/createApartmentsSchema";
 
-// Create a table for apartments if it doesn't exist
+
+
 const createApartmentsTableIfNotExists = async () => {
   try {
     await pool.query(`
@@ -27,7 +28,6 @@ const createApartmentsTableIfNotExists = async () => {
   }
 };
 
-// Function to check if the building exists
 const checkIfBuildingExists = async (buildingId: number) => {
   const result = await pool.query(
     "SELECT 1 FROM buildings WHERE id = $1",
@@ -36,7 +36,7 @@ const checkIfBuildingExists = async (buildingId: number) => {
   return result.rows.length > 0;
 };
 
-// Function to check if the floor plan exists
+
 const checkIfFloorPlanExists = async (floorPlanId: number) => {
   const result = await pool.query(
     "SELECT 1 FROM floor_plans WHERE id = $1",
@@ -45,7 +45,7 @@ const checkIfFloorPlanExists = async (floorPlanId: number) => {
   return result.rows.length > 0;
 };
 
-// Function to check if apartments with the same building_id, name, and floor_plan_id already exist
+
 const checkExistingApartments = async (buildingId: number, name: string, floorPlanId: number) => {
   const result = await pool.query(`
     SELECT * FROM apartments 
@@ -55,7 +55,6 @@ const checkExistingApartments = async (buildingId: number, name: string, floorPl
   return result.rows.length > 0;
 };
 
-// Function to generate apartments based on the floor plan info
 const generateApartments = async (buildingId: number, name: string, floorPlanId: number) => {
   try {
     const floorPlanResult = await pool.query(
@@ -114,7 +113,7 @@ const generateApartments = async (buildingId: number, name: string, floorPlanId:
   }
 };
 
-// Controller function to create apartments based on floor plan info
+
 export const createApartments = async (req: Request, res: Response) => {
   const { building_id, name, floor_plan_id } = req.body;
 
@@ -194,7 +193,6 @@ export const createApartments = async (req: Request, res: Response) => {
   }
 };
 
-
 const getApartmentsByBuildingId = async (buildingId: number) => {
   try {
     // Query apartments based on building_id and floor_plan_id
@@ -255,12 +253,12 @@ const getApartmentsByBuildingId = async (buildingId: number) => {
   }
 };
 
-// Controller function to handle GET request for apartments by building_id
+
 export const getApartments = async (req: Request, res: Response) => {
-  const { building_id } = req.params;  // Get the building_id from the request params
+  const { building_id } = req.params; 
 
   try {
-    // Ensure building_id is provided
+ 
     if (!building_id) {
       return res.status(400).json({
         status: "ERROR",
@@ -269,7 +267,6 @@ export const getApartments = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate the building_id as an integer
     const buildingId = parseInt(building_id, 10);
     if (isNaN(buildingId)) {
       return res.status(400).json({
@@ -279,10 +276,8 @@ export const getApartments = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch apartments by building_id, grouped by floor_plan_id and floor
     const apartmentsGrouped = await getApartmentsByBuildingId(buildingId);
 
-    // If no apartments are found, return a 404 response
     if (apartmentsGrouped.length === 0) {
       return res.status(404).json({
         status: "ERROR",
@@ -291,11 +286,10 @@ export const getApartments = async (req: Request, res: Response) => {
       });
     }
 
-    // Return apartments grouped by floor_plan_id and floor in the response
     return res.status(200).json({
       status: "SUCCESS",
       message: `Apartments retrieved successfully for building ID ${buildingId}.`,
-      apartments: apartmentsGrouped,  // Return the grouped apartments
+      apartments: apartmentsGrouped, 
     });
   } catch (error) {
     // Handle unexpected errors
@@ -308,12 +302,117 @@ export const getApartments = async (req: Request, res: Response) => {
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
-
-    // Fallback for any other unexpected errors
     return res.status(500).json({
       status: "ERROR",
       error: "UNKNOWN_ERROR",
       message: "An unknown error occurred while processing your request.",
     });
+  }
+};
+
+
+export const updateApartmentStatus = async (req: Request, res: Response) => {
+  try {
+    // Validate the request body using Joi
+    const { error, value } = updateApartmentStatusSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        error: "Invalid input",
+        details: error.details
+      });
+    }
+
+    const { status, floor_plan_id, flat_number } = value;
+
+    // Find the apartment based on floor_plan_id and flat_number
+    const query = `
+      UPDATE apartments 
+      SET status = $1 
+      WHERE floor_plan_id = $2 AND flat_number = $3 
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [status, floor_plan_id, flat_number]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Apartment not found with the given floor_plan_id and flat_number" });
+    }
+
+    res.json({
+      message: "Apartment status updated successfully",
+      apartment: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error updating apartment status:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+ 
+ 
+
+export const updateSharedProperties = async (req: Request, res: Response) => {
+  try {
+    const { floor_plan_id, flat_id, square_meters } = req.body;
+
+    console.log(floor_plan_id, flat_id, square_meters);
+
+    // Validate required fields
+    if (!floor_plan_id || !flat_id) {
+      return res.status(400).json({
+        error: 'Both floor_plan_id and flat_id are required',
+      });
+    }
+
+    // Ensure that square_meters is provided
+    if (square_meters === undefined) {
+      return res.status(400).json({
+        error: 'Square meters must be provided.',
+      });
+    }
+
+    // Check if the floor_plan_id exists
+    const checkFloorPlanQuery = `
+      SELECT 1 FROM floor_plans WHERE id = $1
+    `;
+    const checkFloorPlanResult = await pool.query(checkFloorPlanQuery, [floor_plan_id]);
+
+    if (checkFloorPlanResult.rowCount === 0) {
+      return res.status(404).json({
+        error: 'Floor plan not found',
+      });
+    }
+
+    // Build and execute SQL query to update square_meters for all matching flat_id in the floor plan
+    const query = `
+      UPDATE apartments
+      SET square_meters = $3
+      WHERE floor_plan_id = $1
+      AND flat_id = $2
+      RETURNING flat_id, flat_number, status, square_meters
+    `;
+
+    const values = [floor_plan_id, flat_id, square_meters];
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: 'No apartments found with the provided flat_id under this floor plan',
+      });
+    }
+
+    res.json({
+      message: 'Shared properties updated successfully',
+      updatedApartments: result.rows,
+      affectedCount: result.rowCount,
+    });
+
+  } catch (error) {
+    console.error('Error updating shared properties:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
