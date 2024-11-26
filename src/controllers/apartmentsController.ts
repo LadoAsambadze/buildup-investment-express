@@ -1,6 +1,7 @@
 import pool from "config/sql";
 import { Request, Response } from "express";
 import { createApartmentsSchema, updateApartmentStatusSchema } from "../schemas/createApartmentsSchema";
+import { removeUploadedFile } from "middlewares/uploadApartmentsImage";
 
 
 
@@ -355,51 +356,67 @@ export const updateApartmentStatus = async (req: Request, res: Response) => {
  
 
 export const updateSharedProperties = async (req: Request, res: Response) => {
+  const uploadedFile = req.file;
+  
   try {
     const { floor_plan_id, flat_id, square_meters } = req.body;
 
-    console.log(floor_plan_id, flat_id, square_meters);
-
-    // Validate required fields
+ 
     if (!floor_plan_id || !flat_id) {
+      if (uploadedFile) removeUploadedFile(uploadedFile.path);
       return res.status(400).json({
         error: 'Both floor_plan_id and flat_id are required',
       });
     }
 
-    // Ensure that square_meters is provided
+  
     if (square_meters === undefined) {
+      if (uploadedFile) removeUploadedFile(uploadedFile.path);
       return res.status(400).json({
         error: 'Square meters must be provided.',
       });
     }
 
-    // Check if the floor_plan_id exists
+ 
     const checkFloorPlanQuery = `
       SELECT 1 FROM floor_plans WHERE id = $1
     `;
     const checkFloorPlanResult = await pool.query(checkFloorPlanQuery, [floor_plan_id]);
 
     if (checkFloorPlanResult.rowCount === 0) {
+      if (uploadedFile) removeUploadedFile(uploadedFile.path);
       return res.status(404).json({
         error: 'Floor plan not found',
       });
     }
 
-    // Build and execute SQL query to update square_meters for all matching flat_id in the floor plan
-    const query = `
-      UPDATE apartments
+ 
+    let query = `
+      UPDATE apartments 
       SET square_meters = $3
-      WHERE floor_plan_id = $1
-      AND flat_id = $2
-      RETURNING flat_id, flat_number, status, square_meters
+    `;
+    let values: any[] = [floor_plan_id, flat_id, square_meters];
+
+    // Add image update if file is uploaded
+    if (uploadedFile) {
+      query += `, image = $${values.length + 1}`;
+      values.push(`/uploads/apartments/${uploadedFile.filename}`);
+    }
+
+    // Complete the query
+    query += `
+      WHERE floor_plan_id = $1 
+      AND flat_id = $2 
+      RETURNING flat_id, flat_number, status, square_meters${uploadedFile ? ', image' : ''}
     `;
 
-    const values = [floor_plan_id, flat_id, square_meters];
-
+    // Execute the query
     const result = await pool.query(query, values);
 
     if (result.rowCount === 0) {
+      // If file was uploaded, remove the file
+      if (uploadedFile) removeUploadedFile(uploadedFile.path);
+
       return res.status(404).json({
         error: 'No apartments found with the provided flat_id under this floor plan',
       });
@@ -413,6 +430,12 @@ export const updateSharedProperties = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Error updating shared properties:', error);
+    
+    // If file was uploaded during an error, remove it
+    if (uploadedFile) {
+      removeUploadedFile(uploadedFile.path);
+    }
+
     res.status(500).json({ error: 'Internal server error' });
   }
 };

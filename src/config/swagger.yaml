@@ -1526,7 +1526,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -1542,6 +1542,10 @@ paths:
                   type: number
                   description: The square meters of the flat
                   example: 50.0
+                image:
+                  type: string
+                  format: binary
+                  description: Image file for the apartment
       responses:
         "200":
           description: Shared properties updated successfully
@@ -1570,6 +1574,9 @@ paths:
                         square_meters:
                           type: number
                           example: 50.0
+                        image:
+                          type: string
+                          example: /uploads/apartments/apartment-1234567890.jpg  # Example image path
                   affectedCount:
                     type: integer
                     example: 1

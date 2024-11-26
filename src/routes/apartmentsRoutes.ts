@@ -2,6 +2,7 @@
 
 import express, { Request, Response } from "express";
 import { createApartments, getApartments, updateApartmentStatus, updateSharedProperties } from "controllers/apartmentsController";
+import { apartmentImageUpload } from "middlewares/uploadApartmentsImage";
  
  
 const apartmentsRoutes = express.Router();
@@ -36,6 +37,7 @@ apartmentsRoutes.put(
 
 apartmentsRoutes.put(
   "/update-shared-properties",
+  apartmentImageUpload, 
 
   async (req: Request, res: Response) => {
     await updateSharedProperties(req, res);
@@ -44,7 +46,7 @@ apartmentsRoutes.put(
 
 
 
-
+ 
 
 
 
